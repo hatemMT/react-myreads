@@ -1,7 +1,7 @@
 import React from "react";
 import {Link} from "react-router-dom";
 import * as debounce from "lodash.debounce"
-import {search} from "./BooksAPI";
+import {getAll, search} from "./BooksAPI";
 import Book from "./Book";
 
 class SearchPage extends React.Component {
@@ -24,8 +24,16 @@ class SearchPage extends React.Component {
             this.setState({lastSearch: this.state.searchText});
             search(this.state.searchText)
                 .then(r => {
-                    console.log(r)
-                    this.setState({searchResult: r});
+                    getAll()
+                        .then(allOnShelfs => {
+                            allOnShelfs.forEach(bookOnShelf => {
+                                let found = r.filter(b => b.id === bookOnShelf.id);
+                                if (found.length===1) {
+                                    found[0].shelf = bookOnShelf.shelf;
+                                }
+                            })
+                            this.setState({searchResult: r});
+                        })
                 });
         }
     }
