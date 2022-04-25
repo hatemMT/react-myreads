@@ -9,6 +9,7 @@ class SearchPage extends React.Component {
     constructor(props, context, state) {
         super(props, context);
         this.state = {
+            loading: false,
             lastSearch: '',
             searchText: '',
             searchResult: []
@@ -24,23 +25,27 @@ class SearchPage extends React.Component {
             this.setState({lastSearch: this.state.searchText});
             search(this.state.searchText)
                 .then(r => {
-                    getAll()
-                        .then(allOnShelfs => {
-                            allOnShelfs.forEach(bookOnShelf => {
-                                let found = r.filter(b => b.id === bookOnShelf.id);
-                                if (found.length===1) {
-                                    found[0].shelf = bookOnShelf.shelf;
-                                }
-                            })
-                            this.setState({searchResult: r});
-                        })
-                });
+                    if (r && r.length > 0) {
+                        getAll()
+                            .then(allOnShelfs => {
+                                allOnShelfs.forEach(bookOnShelf => {
+                                    let found = r.filter(b => b.id === bookOnShelf.id);
+                                    if (found.length === 1) {
+                                        found[0].shelf = bookOnShelf.shelf;
+                                    }
+                                })
+                                this.setState({searchResult: r, loading: false});
+                            }, _ => this.setState({searchResult: [], loading: false}))
+                    } else {
+                        this.setState({searchResult: [], loading: false});
+                    }
+                }, _ => this.setState({searchResult: [], loading: false}));
         }
     }
 
     onSearchTextChange(e) {
         let text = e.target.value;
-        this.setState({searchText: text})
+        this.setState({loading: true, searchText: text})
         debounce(this.doSearch, 1000).bind(this)();
     };
 
@@ -61,14 +66,20 @@ class SearchPage extends React.Component {
             <div className="search-books-results">
                 <ol className="books-grid">
                     {
-                        this.state.searchResult
-                        && this.state.searchResult.length > 0
-                        && this.state.searchResult.map(book => (
-                            <Book key={book.id} id={book.id} title={book.title}
-                                  author={book.authors}
-                                  coverUrl={book.imageLinks && book.imageLinks.thumbnail}
-                                  shelf={book.shelf}/>
-                        ))
+                        (
+                            this.state.searchResult
+                            && this.state.searchResult.length > 0
+                            && this.state.searchResult.map(book => (
+                                <Book key={book.id} id={book.id} title={book.title}
+                                      author={book.authors}
+                                      coverUrl={book.imageLinks && book.imageLinks.thumbnail}
+                                      shelf={book.shelf}/>
+                            ))
+                        )
+                        || (this.state.searchText && this.state.loading && <h1>Searching...</h1>)
+                        || this.state.searchText && (this.state.searchResult.length === 0) && (
+                            <h2>There no books found for your criteria</h2>)
+                        || (this.state.searchResult.length === 0) && (<h1>Type something to search for</h1>)
                     }
                 </ol>
             </div>
